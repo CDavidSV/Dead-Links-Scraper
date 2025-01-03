@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/spf13/cobra"
 )
@@ -33,9 +36,34 @@ var rootCmd = cobra.Command{
 			return
 		}
 
-		table := table.New()
-		fmt.Println(table)
+		rows := make([][]string, len(r.DeadLinks))
 
+		for i, pageStatus := range r.DeadLinks {
+			row := []string{strconv.Itoa(i + 1), fmt.Sprintf("%d %s", pageStatus.StatusCode, http.StatusText(pageStatus.StatusCode)), pageStatus.RawUrl}
+			rows[i] = row
+		}
+
+		table := table.New().
+			Border(lipgloss.RoundedBorder()).
+			BorderStyle(TableBorderStyle).
+			Headers("Num.", "Status", "URL").
+			StyleFunc(func(row, col int) lipgloss.Style {
+				switch {
+				case row == -1:
+					return TableHeaderStyle
+				case row%2 == 0 && (col == 0):
+					return TableEvenRowStyle.Align(lipgloss.Center)
+				case row%2 != 0 && (col == 0):
+					return TableOddRowStyle.Align(lipgloss.Center)
+				case row%2 == 0:
+					return TableEvenRowStyle
+				default:
+					return TableOddRowStyle
+				}
+			}).
+			Rows(rows...)
+
+		fmt.Println(table)
 	},
 }
 

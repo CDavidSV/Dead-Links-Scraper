@@ -21,13 +21,14 @@ type Scraper struct {
 }
 
 type Result struct {
-	LiveLinks []string
-	DeadLinks []string
+	LiveLinks []PageState
+	DeadLinks []PageState
 }
 
 type PageState struct {
-	rawUrl string
-	isDead bool
+	RawUrl     string
+	StatusCode int
+	isDead     bool
 }
 
 func validateURL(url *url.URL) error {
@@ -136,14 +137,14 @@ func (s *Scraper) processPage(inputURL string, linksChan chan string, resultChan
 	response, err := s.httpClient.Get(inputURL)
 	if err != nil {
 		s.log(ErrorStyle.Render(fmt.Sprintf("Error fetching page: %s", err.Error())))
-		resultChan <- PageState{rawUrl: inputURL, isDead: true}
+		resultChan <- PageState{RawUrl: inputURL, isDead: true, StatusCode: -1}
 		return
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode > 400 {
 		s.log(ErrorStyle.Render(fmt.Sprintf("%s responded with status code %d", inputURL, response.StatusCode)))
-		resultChan <- PageState{rawUrl: inputURL, isDead: true}
+		resultChan <- PageState{RawUrl: inputURL, isDead: true, StatusCode: response.StatusCode}
 		return
 	}
 
@@ -151,11 +152,11 @@ func (s *Scraper) processPage(inputURL string, linksChan chan string, resultChan
 	if err != nil {
 		// If the page is not valid HTML, we can't find any links
 		s.log(WarningStyle.Render(fmt.Sprintf("Error parsing page: %s", err.Error())))
-		resultChan <- PageState{rawUrl: inputURL, isDead: false}
+		resultChan <- PageState{RawUrl: inputURL, isDead: false, StatusCode: response.StatusCode}
 		return
 	}
 
-	resultChan <- PageState{rawUrl: inputURL, isDead: false}
+	resultChan <- PageState{RawUrl: inputURL, isDead: false, StatusCode: response.StatusCode}
 	links = s.findAllLinks(doc, links)
 	for _, links := range links {
 		linksChan <- links
@@ -185,8 +186,8 @@ func (s *Scraper) Run() Result {
 	var wg sync.WaitGroup
 
 	r := Result{
-		LiveLinks: make([]string, 0),
-		DeadLinks: make([]string, 0),
+		LiveLinks: make([]PageState, 0),
+		DeadLinks: make([]PageState, 0),
 	}
 
 	go func() {
@@ -217,9 +218,9 @@ func (s *Scraper) Run() Result {
 
 	for pageState := range processedLinksChan {
 		if pageState.isDead {
-			r.DeadLinks = append(r.DeadLinks, pageState.rawUrl)
+			r.DeadLinks = append(r.DeadLinks, pageState)
 		} else {
-			r.LiveLinks = append(r.LiveLinks, pageState.rawUrl)
+			r.LiveLinks = append(r.LiveLinks, pageState)
 		}
 	}
 
