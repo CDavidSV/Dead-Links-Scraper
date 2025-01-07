@@ -21,8 +21,9 @@ type Scraper struct {
 }
 
 type Result struct {
-	LiveLinks []PageState
-	DeadLinks []PageState
+	TotalLinks int
+	LiveLinks  []PageState
+	DeadLinks  []PageState
 }
 
 type PageState struct {
@@ -186,8 +187,9 @@ func (s *Scraper) Run() Result {
 	var wg sync.WaitGroup
 
 	r := Result{
-		LiveLinks: make([]PageState, 0),
-		DeadLinks: make([]PageState, 0),
+		TotalLinks: 0,
+		LiveLinks:  make([]PageState, 0),
+		DeadLinks:  make([]PageState, 0),
 	}
 
 	go func() {
@@ -195,10 +197,10 @@ func (s *Scraper) Run() Result {
 			if s.visited(link) {
 				continue
 			}
+			wg.Add(1)
 
 			s.setVisited(link)
-
-			wg.Add(1)
+			r.TotalLinks++
 			go func(link string) {
 				defer wg.Done()
 				s.processPage(link, linksChan, processedLinksChan)

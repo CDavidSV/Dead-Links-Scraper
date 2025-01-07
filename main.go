@@ -29,7 +29,7 @@ var rootCmd = cobra.Command{
 		start := time.Now()
 		r := scraper.Run()
 		fmt.Println("Took: ", time.Since(start))
-
+		fmt.Println("Total links scanned: ", r.TotalLinks)
 		fmt.Printf("Dead links found: %d/%d\n", len(r.DeadLinks), len(r.LiveLinks)+len(r.DeadLinks))
 
 		if len(r.DeadLinks) <= 0 {
