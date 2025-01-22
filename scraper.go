@@ -12,7 +12,6 @@ import (
 
 type Scraper struct {
 	url          *url.URL
-	rawUrl       string
 	visitedLinks map[string]struct{}
 	mu           *sync.RWMutex
 	verbose      bool
@@ -72,7 +71,6 @@ func NewScraper(urlInput string, verbose bool, maxThreads int) (*Scraper, error)
 
 	return &Scraper{
 		url:          url,
-		rawUrl:       urlInput,
 		visitedLinks: make(map[string]struct{}),
 		mu:           &sync.RWMutex{},
 		verbose:      verbose,
@@ -209,7 +207,7 @@ func (s *Scraper) Run() Result {
 	}()
 
 	// Start the process with the initial URL
-	linksChan <- s.rawUrl
+	linksChan <- s.url.String()
 
 	go func() {
 		// Wait for all gorutines to finish before closing the channel
